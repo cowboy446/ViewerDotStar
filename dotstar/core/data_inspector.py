@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget,
                             QTableWidget, QTableWidgetItem, QLabel, QGroupBox,
                             QScrollArea, QPushButton, QComboBox, QSpinBox,
                             QCheckBox, QFrame)
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QColor, QPalette
 from .translator import Translator
 
@@ -60,7 +60,6 @@ class DataInspector(QWidget):
         self.detail_panel.overview_tab.translator = translator
         self.detail_panel.data_tab.translator = translator
         self.detail_panel.stats_tab.translator = translator
-        self.detail_panel.viz_tab.translator = translator
         
         # Reset UI text
         self.tree_widget.setup_tree()
@@ -68,7 +67,6 @@ class DataInspector(QWidget):
         self.detail_panel.setTabText(0, self.translator.tr("overview"))
         self.detail_panel.setTabText(1, self.translator.tr("data"))
         self.detail_panel.setTabText(2, self.translator.tr("statistics"))
-        self.detail_panel.setTabText(3, self.translator.tr("visualization"))
         
     def set_data(self, data: Any, metadata: Dict[str, Any]):
         """Set data to inspect"""
@@ -122,7 +120,7 @@ class DataTreeWidget(QTreeWidget):
         self.setFont(font)
         
     def set_data(self, data: Any, metadata: Dict[str, Any]):
-        """设置数据并构建树形结构"""
+        """Set data and build tree structure"""
         self.data = data
         self.metadata = metadata
         self.clear()
@@ -141,7 +139,7 @@ class DataTreeWidget(QTreeWidget):
         root_item.setExpanded(True)
         
     def _build_tree_recursive(self, parent_item: QTreeWidgetItem, data: Any, path: str, max_depth: int = 5):
-        """递归构建树形结构"""
+        """Recursively build tree structure"""
         if max_depth <= 0:
             return
             
@@ -202,7 +200,7 @@ class DataTreeWidget(QTreeWidget):
                         continue
                         
     def _get_size_description(self, data: Any) -> str:
-        """获取数据大小描述"""
+        """Get data size description"""
         if hasattr(data, 'shape'):
             return str(data.shape)
         elif hasattr(data, '__len__'):
@@ -217,7 +215,7 @@ class DataTreeWidget(QTreeWidget):
         return ""
     
     def _get_description(self, data: Any) -> str:
-        """获取数据描述"""
+        """Get data description"""
         if hasattr(data, 'dtype'):
             return str(data.dtype)
         elif isinstance(data, (int, float)):
@@ -232,23 +230,23 @@ class DataTreeWidget(QTreeWidget):
         return ""
     
     def get_item_path(self, item: QTreeWidgetItem) -> str:
-        """获取项目的路径"""
+        """Get item path"""
         path = item.data(0, Qt.UserRole)
         return path if path else ""
     
     def get_data_at_path(self, path: str) -> Any:
-        """根据路径获取数据"""
+        """Get data at specified path"""
         if not path or self.data is None:
             return self.data
             
         try:
-            # 解析路径并获取数据
+            # Parse path and get data
             result = self.data
             parts = path.split('.')
             
             for part in parts:
                 if '[' in part and ']' in part:
-                    # 处理数组索引
+                    # Handle array index
                     key = part.split('[')[0]
                     index_str = part.split('[')[1].split(']')[0]
                     index = int(index_str)
@@ -257,7 +255,7 @@ class DataTreeWidget(QTreeWidget):
                         result = result[key]
                     result = result[index]
                 else:
-                    # 处理字典键或属性
+                    # Handle dictionary keys or attributes
                     if isinstance(result, dict):
                         result = result[part]
                     else:
@@ -268,7 +266,7 @@ class DataTreeWidget(QTreeWidget):
             return None
 
 class DetailPanel(QTabWidget):
-    """详细信息面板"""
+    """Detail information panel"""
     
     def __init__(self, parent=None, translator=None):
         super().__init__(parent)
@@ -276,36 +274,31 @@ class DetailPanel(QTabWidget):
         self.setup_tabs()
         
     def setup_tabs(self):
-        """设置标签页"""
-        # 概览标签
+        """Setup tab pages"""
+        # Overview tab
         self.overview_tab = OverviewTab(translator=self.translator)
         self.addTab(self.overview_tab, self.translator.tr("overview"))
         
-        # 数据标签
+        # Data tab
         self.data_tab = DataTab(translator=self.translator)
         self.addTab(self.data_tab, self.translator.tr("data"))
         
-        # 统计标签
+        # Statistics tab
         self.stats_tab = StatisticsTab(translator=self.translator)
         self.addTab(self.stats_tab, self.translator.tr("statistics"))
         
-        # 可视化标签
-        self.viz_tab = VisualizationTab(translator=self.translator)
-        self.addTab(self.viz_tab, self.translator.tr("visualization"))
-        
     def show_overview(self, data: Any, metadata: Dict[str, Any]):
-        """显示数据概览"""
+        """Show data overview"""
         self.overview_tab.set_data(data, metadata)
-        self.setCurrentIndex(0)  # 切换到概览标签
+        self.setCurrentIndex(0)  # Switch to overview tab
         
     def show_data_detail(self, data: Any, path: str):
-        """显示数据详情"""
+        """Show data details"""
         self.data_tab.set_data(data, path)
         self.stats_tab.set_data(data, path)
-        self.viz_tab.set_data(data, path)
 
 class OverviewTab(QWidget):
-    """概览标签页"""
+    """Overview tab page"""
     
     def __init__(self, parent=None, translator=None):
         super().__init__(parent)
@@ -313,10 +306,10 @@ class OverviewTab(QWidget):
         self.setup_ui()
         
     def setup_ui(self):
-        """设置界面"""
+        """Setup interface"""
         layout = QVBoxLayout(self)
         
-        # 文件信息区域
+        # File information area
         file_group = QGroupBox(self.translator.tr("file_information"))
         file_layout = QVBoxLayout(file_group)
         self.file_info_label = QLabel()
@@ -342,7 +335,7 @@ class OverviewTab(QWidget):
         layout.addWidget(metadata_group)
         
     def set_data(self, data: Any, metadata: Dict[str, Any]):
-        """设置数据"""
+        """Set data"""
         # Display file information
         file_info = f"""
         <b>File Name:</b> {metadata.get('file_name', 'N/A')}<br>
@@ -361,7 +354,7 @@ class OverviewTab(QWidget):
         self.metadata_text.setText(metadata_text)
         
     def _format_file_size(self, size_bytes: int) -> str:
-        """格式化文件大小"""
+        """Format file size"""
         if size_bytes < 1024:
             return f"{size_bytes} B"
         elif size_bytes < 1024 * 1024:
@@ -401,7 +394,7 @@ class OverviewTab(QWidget):
         return "\n".join(lines)
     
     def _format_metadata(self, metadata: Dict[str, Any]) -> str:
-        """格式化元数据"""
+        """Format metadata"""
         lines = []
         for key, value in metadata.items():
             if isinstance(value, (dict, list)) and len(str(value)) > 100:
@@ -411,45 +404,93 @@ class OverviewTab(QWidget):
         return "\n".join(lines)
 
 class DataTab(QWidget):
-    """数据标签页"""
+    """Data tab page"""
     
     def __init__(self, parent=None, translator=None):
         super().__init__(parent)
         self.translator = translator or Translator()
         self.current_data = None
-        self.display_cache = {}  # 添加显示缓存
+        self.current_path = ""
+        self.data_stack = []  # Data navigation stack
+        self.display_cache = {}  # Add display cache
+        self.click_timer = QTimer()  # Double click timer
+        self.click_timer.setSingleShot(True)
+        self.click_timer.timeout.connect(self._handle_single_click)
+        self.last_clicked_item = None
         self.setup_ui()
         
     def setup_ui(self):
-        """设置界面"""
+        """Setup interface"""
         layout = QVBoxLayout(self)
         
-        # 数据显示区域 - 直接显示标签页
+        # Navigation bar
+        nav_frame = QFrame()
+        nav_layout = QHBoxLayout(nav_frame)
+        
+        self.back_btn = QPushButton("← Back")
+        self.back_btn.clicked.connect(self.go_back)
+        self.back_btn.setEnabled(False)
+        nav_layout.addWidget(self.back_btn)
+        
+        self.path_label = QLabel("Root")
+        self.path_label.setStyleSheet("color: #888888;")  # Change to gray
+        nav_layout.addWidget(self.path_label)
+        
+        nav_layout.addStretch()
+        layout.addWidget(nav_frame)
+        
+        # Data display area - show tabs directly
         self.data_display = QTabWidget()
         layout.addWidget(self.data_display)
         
     def set_data(self, data: Any, path: str):
-        """设置数据"""
+        """Set data"""
         self.current_data = data
-        # 清空缓存
+        self.current_path = path
+        # Clear cache
         self.display_cache.clear()
         self.update_view()
         
+    def go_back(self):
+        """Go back to previous level data"""
+        if self.data_stack:
+            data, path = self.data_stack.pop()
+            self.current_data = data
+            self.current_path = path
+            self.display_cache.clear()
+            self.update_view()
+            
+            if not self.data_stack:
+                self.back_btn.setEnabled(False)
+                
+    def push_data(self, data: Any, path: str):
+        """Push new data to stack"""
+        self.data_stack.append((self.current_data, self.current_path))
+        self.current_data = data
+        self.current_path = path
+        self.display_cache.clear()
+        self.update_view()
+        self.back_btn.setEnabled(True)
+        
     def update_view(self):
-        """更新视图"""
+        """Update view"""
         if self.current_data is None:
             return
             
-        # 清除现有标签
+        # Update path display
+        display_path = self.current_path if self.current_path else "Root"
+        self.path_label.setText(display_path)
+            
+        # Clear existing tabs
         self.data_display.clear()
         
-        # 显示所有三个视图作为标签页
+        # Show all three views as tabs
         self._show_raw_view()
         self._show_text_view()
         self._show_table_view()
             
     def _show_text_view(self):
-        """显示文本视图 - 使用缓存和限制"""
+        """Show text view - use cache and limits"""
         # 检查缓存
         if 'text_view' in self.display_cache:
             text_widget = QTextEdit()
@@ -463,7 +504,7 @@ class DataTab(QWidget):
         text_widget.setReadOnly(True)
         text_widget.setFont(QFont("Consolas", 9))
         
-        # 限制处理的数据大小
+        # Limit processing data size
         text_content = self._format_data_as_text_safe(self.current_data)
         self.display_cache['text_view'] = text_content
         text_widget.setText(text_content)
@@ -471,11 +512,27 @@ class DataTab(QWidget):
         self.data_display.addTab(text_widget, "Text View")
         
     def _show_table_view(self):
-        """显示表格视图 - 限制行列数"""
-        if hasattr(self.current_data, 'shape') and len(self.current_data.shape) <= 2:
-            # Display as table with limits
+        """Show table view - support recursive expansion and double-click navigation"""
+        if hasattr(self.current_data, 'shape'):
+            # Display as table with navigation support
             table = QTableWidget()
-            self._populate_table_safe(table, self.current_data)
+            self._populate_table_recursive(table, self.current_data, self.current_path)
+            table.itemClicked.connect(self._on_table_item_clicked)
+            table.itemDoubleClicked.connect(self._on_table_item_double_clicked)
+            self.data_display.addTab(table, "Table View")
+        elif isinstance(self.current_data, dict):
+            # Display dictionary as table
+            table = QTableWidget()
+            self._populate_dict_table(table, self.current_data, self.current_path)
+            table.itemClicked.connect(self._on_table_item_clicked)
+            table.itemDoubleClicked.connect(self._on_table_item_double_clicked)
+            self.data_display.addTab(table, "Table View")
+        elif isinstance(self.current_data, (list, tuple)):
+            # Display list/tuple as table
+            table = QTableWidget()
+            self._populate_list_table(table, self.current_data, self.current_path)
+            table.itemClicked.connect(self._on_table_item_clicked)
+            table.itemDoubleClicked.connect(self._on_table_item_double_clicked)
             self.data_display.addTab(table, "Table View")
         else:
             # Not suitable for table display
@@ -484,7 +541,7 @@ class DataTab(QWidget):
             self.data_display.addTab(label, "Table View")
             
     def _show_raw_view(self):
-        """显示原始数据视图 - 使用缓存和截断"""
+        """Show raw data view - use cache and truncation"""
         # 检查缓存
         if 'raw_view' in self.display_cache:
             text_widget = QTextEdit()
@@ -506,7 +563,7 @@ class DataTab(QWidget):
         self.data_display.addTab(text_widget, "Raw Data")
     
     def _get_raw_text_safe(self, data: Any, max_chars: int = 10000) -> str:
-        """安全获取原始文本，避免大数据卡顿"""
+        """Safely get raw text, avoid freezing with large data"""
         try:
             # 检查是否是数组且元素数量大于100
             if hasattr(data, 'shape'):
@@ -577,7 +634,7 @@ class DataTab(QWidget):
             return f"Unable to display raw data: {str(e)}\nData type: {type(data)}"
     
     def _format_data_as_text_safe(self, data: Any, max_elements: int = 100) -> str:
-        """安全格式化数据为文本"""
+        """Safely format data as text"""
         try:
             if hasattr(data, 'shape'):
                 # NumPy array or PyTorch tensor or similar objects
@@ -652,8 +709,211 @@ class DataTab(QWidget):
         except Exception as e:
             return f"Unable to format data: {str(e)}\nData type: {type(data)}"
     
+    def _populate_table_recursive(self, table: QTableWidget, data: Any, path: str):
+        """Recursively populate table data, support full expansion of multi-dimensional arrays"""
+        if hasattr(data, 'shape'):
+            if len(data.shape) == 1:
+                # 一维数组 - 横向展示，每个格子一个值
+                cols = min(len(data), 100)  # 限制最大列数防止卡顿
+                table.setRowCount(1)
+                table.setColumnCount(cols)
+                
+                # 设置列标题
+                col_headers = [f"[{i}]" for i in range(cols)]
+                table.setHorizontalHeaderLabels(col_headers)
+                
+                for i in range(cols):
+                    try:
+                        value = data[i]
+                        if hasattr(value, 'shape') and len(value.shape) > 0:
+                            # 如果元素本身是数组，显示形状和类型
+                            item_text = f"Array{value.shape}"
+                            item = QTableWidgetItem(item_text)
+                            item.setData(Qt.UserRole, ('navigate', value, f"{path}[{i}]"))
+                            item.setBackground(QColor(200, 200, 200))  # 改为灰色背景
+                        else:
+                            # 标量值 - 直接显示数值
+                            item = QTableWidgetItem(str(value))
+                            item.setData(Qt.UserRole, ('value', value, f"{path}[{i}]"))
+                        table.setItem(0, i, item)
+                    except Exception as e:
+                        item = QTableWidgetItem(f"Error: {str(e)}")
+                        table.setItem(0, i, item)
+                
+                if len(data) > 100:
+                    # 添加省略信息到最后一列
+                    table.setColumnCount(cols + 1)
+                    item = QTableWidgetItem(f"...({len(data) - 100} more)")
+                    table.setItem(0, cols, item)
+                    
+            elif len(data.shape) == 2:
+                # 二维数组
+                max_rows = min(data.shape[0], 500)
+                max_cols = min(data.shape[1], 50)
+                table.setRowCount(max_rows)
+                table.setColumnCount(max_cols)
+                
+                # 设置列标题
+                col_headers = [f"Col_{i}" for i in range(max_cols)]
+                table.setHorizontalHeaderLabels(col_headers)
+                
+                for i in range(max_rows):
+                    for j in range(max_cols):
+                        try:
+                            value = data[i, j]
+                            if hasattr(value, 'shape') and len(value.shape) > 0:
+                                # 元素是数组
+                                item_text = f"Array {value.shape}"
+                                item = QTableWidgetItem(item_text)
+                                item.setData(Qt.UserRole, ('navigate', value, f"{path}[{i},{j}]"))
+                                item.setBackground(QColor(200, 200, 200))  # 改为灰色背景
+                            else:
+                                # 标量值
+                                item = QTableWidgetItem(str(value))
+                                item.setData(Qt.UserRole, ('value', value, f"{path}[{i},{j}]"))
+                            table.setItem(i, j, item)
+                        except Exception as e:
+                            item = QTableWidgetItem("Error")
+                            table.setItem(i, j, item)
+                
+                if data.shape[0] > 500 or data.shape[1] > 50:
+                    table.setWindowTitle(f"Showing {max_rows}×{max_cols} of {data.shape[0]}×{data.shape[1]}")
+                    
+            else:
+                # 高维数组，展示为可导航的层次结构
+                if len(data.shape) > 2:
+                    rows = min(data.shape[0], 100)
+                    table.setRowCount(rows)
+                    table.setColumnCount(1)
+                    table.setHorizontalHeaderLabels([f"Dimension 0 (of {data.shape})"])
+                    
+                    for i in range(rows):
+                        try:
+                            sub_data = data[i]
+                            item_text = f"[{i}] → Array {sub_data.shape} ({type(sub_data).__name__})"
+                            item = QTableWidgetItem(item_text)
+                            item.setData(Qt.UserRole, ('navigate', sub_data, f"{path}[{i}]"))
+                            item.setBackground(QColor(200, 200, 200))  # 改为灰色背景
+                            table.setItem(i, 0, item)
+                        except Exception as e:
+                            item = QTableWidgetItem(f"Error: {str(e)}")
+                            table.setItem(i, 0, item)
+                            
+                    if data.shape[0] > 100:
+                        table.setRowCount(rows + 1)
+                        item = QTableWidgetItem(f"... ({data.shape[0] - 100} more items hidden)")
+                        table.setItem(rows, 0, item)
+
+    def _populate_dict_table(self, table: QTableWidget, data: dict, path: str):
+        """Populate dictionary data as table"""
+        table.setRowCount(len(data))
+        table.setColumnCount(2)
+        table.setHorizontalHeaderLabels(["Key", "Value"])
+        
+        for i, (key, value) in enumerate(data.items()):
+            # 键列
+            key_item = QTableWidgetItem(str(key))
+            table.setItem(i, 0, key_item)
+            
+            # 值列
+            if hasattr(value, 'shape') and len(value.shape) > 0:
+                # 数组值
+                value_text = f"Array {value.shape} ({type(value).__name__})"
+                value_item = QTableWidgetItem(value_text)
+                value_item.setData(Qt.UserRole, ('navigate', value, f"{path}.{key}"))
+                value_item.setBackground(QColor(200, 200, 200))  # 改为灰色背景
+            elif isinstance(value, (dict, list, tuple)) and len(str(value)) > 100:
+                # 复杂结构
+                value_text = f"{type(value).__name__} (len={len(value)})"
+                value_item = QTableWidgetItem(value_text)
+                value_item.setData(Qt.UserRole, ('navigate', value, f"{path}.{key}"))
+                value_item.setBackground(QColor(200, 200, 200))  # 改为灰色背景
+            else:
+                # 简单值
+                value_text = str(value)
+                if len(value_text) > 100:
+                    value_text = value_text[:100] + "..."
+                value_item = QTableWidgetItem(value_text)
+                value_item.setData(Qt.UserRole, ('value', value, f"{path}.{key}"))
+            
+            table.setItem(i, 1, value_item)
+
+    def _populate_list_table(self, table: QTableWidget, data: list, path: str):
+        """Populate list data as table"""
+        max_items = min(len(data), 1000)
+        table.setRowCount(max_items)
+        table.setColumnCount(2)
+        table.setHorizontalHeaderLabels(["Index", "Value"])
+        
+        for i in range(max_items):
+            # 索引列
+            index_item = QTableWidgetItem(str(i))
+            table.setItem(i, 0, index_item)
+            
+            # 值列
+            value = data[i]
+            if hasattr(value, 'shape') and len(value.shape) > 0:
+                # 数组值
+                value_text = f"Array {value.shape} ({type(value).__name__})"
+                value_item = QTableWidgetItem(value_text)
+                value_item.setData(Qt.UserRole, ('navigate', value, f"{path}[{i}]"))
+                value_item.setBackground(QColor(200, 200, 200))  # 改为灰色背景
+            elif isinstance(value, (dict, list, tuple)) and len(str(value)) > 100:
+                # 复杂结构
+                value_text = f"{type(value).__name__} (len={len(value)})"
+                value_item = QTableWidgetItem(value_text)
+                value_item.setData(Qt.UserRole, ('navigate', value, f"{path}[{i}]"))
+                value_item.setBackground(QColor(200, 200, 200))  # 改为灰色背景
+            else:
+                # 简单值
+                value_text = str(value)
+                if len(value_text) > 100:
+                    value_text = value_text[:100] + "..."
+                value_item = QTableWidgetItem(value_text)
+                value_item.setData(Qt.UserRole, ('value', value, f"{path}[{i}]"))
+            
+            table.setItem(i, 1, value_item)
+            
+        if len(data) > 1000:
+            table.setRowCount(max_items + 1)
+            item = QTableWidgetItem(f"... ({len(data) - 1000} more items hidden)")
+            table.setItem(max_items, 1, item)
+
+    def _on_table_item_clicked(self, item: QTableWidgetItem):
+        """Handle table cell click event - delayed processing to distinguish single and double clicks"""
+        self.last_clicked_item = item
+        self.click_timer.start(300)  # 300ms delay
+        
+    def _handle_single_click(self):
+        """Handle single click event - only show information, no navigation"""
+        if self.last_clicked_item:
+            user_data = self.last_clicked_item.data(Qt.UserRole)
+            if user_data and len(user_data) == 3:
+                action, value, new_path = user_data
+                if action == 'navigate':
+                    # 单击可导航项目时显示提示
+                    print(f"Double-click to navigate to: {new_path}")
+                elif action == 'value':
+                    # 显示值详情
+                    print(f"Value at {new_path}: {value}")
+
+    def _on_table_item_double_clicked(self, item: QTableWidgetItem):
+        """Handle table cell double click event - execute navigation"""
+        # Stop single click timer
+        self.click_timer.stop()
+        
+        user_data = item.data(Qt.UserRole)
+        if user_data and len(user_data) == 3:
+            action, value, new_path = user_data
+            if action == 'navigate':
+                # Navigate to sub data
+                self.push_data(value, new_path)
+            elif action == 'value':
+                # Show detailed information when double-clicking value item
+                print(f"Detailed view of value at {new_path}: {value}")
+
     def _populate_table_safe(self, table: QTableWidget, data: Any):
-        """安全填充表格数据，限制大小"""
+        """Safely populate table data with size limits (keep original method for compatibility)"""
         if hasattr(data, 'shape'):
             if len(data.shape) == 1:
                 # One-dimensional array - limit to 10 rows
@@ -694,7 +954,7 @@ class DataTab(QWidget):
                     table.setHorizontalHeaderLabels([f"Col {i}" for i in range(max_cols)] + [truncated_info] if max_cols < data.shape[1] else [f"Col {i}" for i in range(max_cols)])
 
 class StatisticsTab(QWidget):
-    """统计标签页"""
+    """Statistics tab page"""
     
     def __init__(self, parent=None, translator=None):
         super().__init__(parent)
@@ -702,7 +962,7 @@ class StatisticsTab(QWidget):
         self.setup_ui()
         
     def setup_ui(self):
-        """设置界面"""
+        """Setup interface"""
         layout = QVBoxLayout(self)
         
         self.stats_text = QTextEdit()
@@ -710,7 +970,7 @@ class StatisticsTab(QWidget):
         layout.addWidget(self.stats_text)
         
     def set_data(self, data: Any, path: str):
-        """设置数据并计算统计信息"""
+        """Set data and calculate statistics"""
         stats_text = self._calculate_statistics(data)
         self.stats_text.setText(stats_text)
         
@@ -761,75 +1021,4 @@ class StatisticsTab(QWidget):
             
         return "\n".join(lines)
 
-class VisualizationTab(QWidget):
-    """可视化标签页"""
-    
-    def __init__(self, parent=None, translator=None):
-        super().__init__(parent)
-        self.translator = translator or Translator()
-        self.setup_ui()
-        
-    def setup_ui(self):
-        """设置界面"""
-        layout = QVBoxLayout(self)
-        
-        # 控制面板
-        control_frame = QFrame()
-        control_layout = QHBoxLayout(control_frame)
-        
-        self.viz_type_combo = QComboBox()
-        self.viz_type_combo.addItems([
-            self.translator.tr("auto_select"),
-            self.translator.tr("histogram"),
-            self.translator.tr("scatter_plot"),
-            self.translator.tr("line_plot"),
-            self.translator.tr("heatmap")
-        ])
-        control_layout.addWidget(QLabel(self.translator.tr("visualization_type") + ":"))
-        control_layout.addWidget(self.viz_type_combo)
-        
-        self.generate_btn = QPushButton(self.translator.tr("generate_chart"))
-        self.generate_btn.clicked.connect(self.generate_visualization)
-        control_layout.addWidget(self.generate_btn)
-        
-        control_layout.addStretch()
-        layout.addWidget(control_frame)
-        
-        # Visualization display area
-        self.viz_label = QLabel("Select data and click generate chart")
-        self.viz_label.setAlignment(Qt.AlignCenter)
-        self.viz_label.setMinimumHeight(400)
-        self.viz_label.setStyleSheet("border: 1px solid gray;")
-        layout.addWidget(self.viz_label)
-        
-        self.current_data = None
-        
-    def set_data(self, data: Any, path: str):
-        """设置数据"""
-        self.current_data = data
-        
-    def generate_visualization(self):
-        """Generate visualization"""
-        if self.current_data is None:
-            self.viz_label.setText("No data to visualize")
-            return
-            
-        try:
-            # matplotlib should be used here to generate charts
-            # For simplicity, display text information for now
-            viz_info = self._analyze_visualization_potential(self.current_data)
-            self.viz_label.setText(viz_info)
-        except Exception as e:
-            self.viz_label.setText(f"Visualization generation failed: {str(e)}")
-            
-    def _analyze_visualization_potential(self, data: Any) -> str:
-        """Analyze visualization potential"""
-        if hasattr(data, 'shape'):
-            if len(data.shape) == 1:
-                return f"One-dimensional data, can draw histogram or line plot\nData shape: {data.shape}"
-            elif len(data.shape) == 2:
-                return f"Two-dimensional data, can draw heatmap or scatter plot\nData shape: {data.shape}"
-            else:
-                return f"Multi-dimensional data, needs dimensionality reduction for visualization\nData shape: {data.shape}"
-        else:
-            return f"Data type {type(data).__name__} does not support direct visualization"
+

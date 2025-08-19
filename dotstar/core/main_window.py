@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                             QStatusBar, QFileDialog, QMessageBox, QLabel,
                             QPushButton, QFrame, QTextEdit, QProgressBar,
                             QGroupBox, QApplication, QListWidget, QListWidgetItem,
-                            QAbstractItemView, QDialog, QGridLayout)
+                            QAbstractItemView, QDialog, QGridLayout, QScrollArea)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QSettings
 from PyQt5.QtGui import QIcon, QFont, QPixmap, QDragEnterEvent, QDropEvent
 
@@ -174,7 +174,7 @@ class MainWindow(QMainWindow):
         self.main_splitter.addWidget(self.data_inspector)
         
         # 设置分割器比例
-        self.main_splitter.setSizes([300, 900])
+        self.main_splitter.setSizes([200, 1000])
         
     def create_left_panel(self) -> QWidget:
         """创建左侧面板"""
@@ -554,21 +554,40 @@ class SupportedFormatsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(translator.tr('supported_formats_title', 'Supported File Formats'))
-        self.setMinimumSize(800, 600)
+        
+        # 自适应屏幕尺寸
+        screen = QApplication.primaryScreen()
+        screen_size = screen.availableGeometry()
+        
+        # 计算合适的对话框尺寸
+        dialog_width = min(900, int(screen_size.width() * 0.8))
+        dialog_height = min(700, int(screen_size.height() * 0.8))
+        
+        self.resize(dialog_width, dialog_height)
+        self.setMinimumSize(400, 300)  # 设置最小尺寸防止过小
+        
         self.setup_ui()
         
     def setup_ui(self):
         """Setup the dialog interface"""
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
         
         # Title
         title_label = QLabel("Supported file formats:")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px;")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
         layout.addWidget(title_label)
+        
+        # 创建滚动区域
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
         # Create grid layout for categories
         grid_widget = QWidget()
         grid_layout = QGridLayout(grid_widget)
+        grid_layout.setSpacing(10)
         
         # Define format categories
         categories = {
@@ -614,19 +633,47 @@ class SupportedFormatsDialog(QDialog):
             }
         }
         
+        # 根据对话框宽度确定列数
+        dialog_width = self.width()
+        if dialog_width < 500:
+            max_cols = 1
+        elif dialog_width < 700:
+            max_cols = 2
+        else:
+            max_cols = 3
+        
         # Create columns for each category
         col = 0
-        max_cols = 3  # Maximum 3 columns
         
         for category_name, formats in categories.items():
             # Create group box for category
             group_box = QGroupBox(category_name)
+            group_box.setStyleSheet("""
+                QGroupBox {
+                    font-weight: bold;
+                    border: 2px solid #cccccc;
+                    border-radius: 5px;
+                    margin-top: 10px;
+                    padding-top: 10px;
+                }
+                QGroupBox::title {
+                    subcontrol-origin: margin;
+                    left: 10px;
+                    padding: 0 5px 0 5px;
+                }
+            """)
             group_layout = QVBoxLayout(group_box)
+            group_layout.setSpacing(3)
             
             # Add formats to the group
             for ext, desc in formats.items():
                 format_label = QLabel(f"<b>{ext}</b>: {desc}")
-                format_label.setStyleSheet("margin: 2px; padding: 2px;")
+                format_label.setStyleSheet("""
+                    margin: 1px 5px; 
+                    padding: 2px;
+                    font-size: 11px;
+                """)
+                format_label.setWordWrap(True)  # 允许文本换行
                 group_layout.addWidget(format_label)
             
             # Add group to grid
@@ -635,7 +682,9 @@ class SupportedFormatsDialog(QDialog):
             grid_layout.addWidget(group_box, row, column)
             col += 1
         
-        layout.addWidget(grid_widget)
+        # 设置滚动区域内容
+        scroll_area.setWidget(grid_widget)
+        layout.addWidget(scroll_area)
         
         # OK button
         button_layout = QHBoxLayout()
@@ -650,6 +699,7 @@ class SupportedFormatsDialog(QDialog):
                 padding: 8px 20px;
                 border-radius: 4px;
                 font-size: 12px;
+                min-width: 60px;
             }
             QPushButton:hover {
                 background-color: #005a9e;
@@ -659,3 +709,10 @@ class SupportedFormatsDialog(QDialog):
         button_layout.addWidget(ok_button)
         
         layout.addLayout(button_layout)
+        
+    def resizeEvent(self, event):
+        """处理窗口大小变化事件，重新调整布局"""
+        super().resizeEvent(event)
+        # 当窗口大小改变时，可以在这里重新布局
+        # 为了简化，这里只是调用父类方法
+        # 实际的列数调整已经在初始化时根据宽度设置好了

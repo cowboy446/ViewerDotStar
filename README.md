@@ -8,7 +8,7 @@ Now it supports ubuntu only.
 ![](figs/image.png)
 - **File Format Support**: JSON, Pickle, NumPy, MATLAB, HDF5, NetCDF, CSV, YAML, TOML, PLY, OBJ, STL, PyTorch, SafeTensors, TIFF, FITS
 - **Data Inspection**: Tree view, multiple display modes, statistical analysis
-- **User Interface**: Drag & drop, recent files, multi-language support
+- **User Interface**: Drag & drop, recent files, multi-language support; Support for both high-DPI and low-DPI displays
 
 ## Installation
 
