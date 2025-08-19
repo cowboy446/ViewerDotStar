@@ -109,7 +109,7 @@ class DataTreeWidget(QTreeWidget):
             self.translator.tr("name"), 
             self.translator.tr("type"), 
             self.translator.tr("size shape"), 
-            self.translator.tr("data format")
+            self.translator.tr("data description")
         ])
         self.setColumnWidth(0, 150)
         self.setColumnWidth(1, 100)
@@ -162,7 +162,7 @@ class DataTreeWidget(QTreeWidget):
                     self._build_tree_recursive(item, value, current_path, max_depth - 1)
                     
         elif isinstance(data, (list, tuple)):
-            for i, value in enumerate(data[:100]):  # Limit display to first 100 elements
+            for i, value in enumerate(data[:10]):  # Limit display to first 10 elements
                 current_path = f"{path}[{i}]" if path else f"[{i}]"
                 item = QTreeWidgetItem([
                     f"[{i}]",
@@ -178,8 +178,8 @@ class DataTreeWidget(QTreeWidget):
                     self._build_tree_recursive(item, value, current_path, max_depth - 1)
                     
             # If list is too long, add ellipsis
-            if len(data) > 100:
-                item = QTreeWidgetItem([f"... ({len(data) - 100} more items)", "", "", ""])
+            if len(data) > 10:
+                item = QTreeWidgetItem([f"... ({len(data) - 10} more items)", "", "", ""])
                 parent_item.addChild(item)
                 
         elif hasattr(data, '__dict__'):
@@ -390,10 +390,7 @@ class OverviewTab(QWidget):
                 
         if isinstance(data, dict):
             lines.append(f"Key Count: {len(data)}")
-            if len(data) <= 10:
-                lines.append(f"Keys: {list(data.keys())}")
-            else:
-                lines.append(f"First 10 Keys: {list(data.keys())[:10]}")
+            lines.append(f"Keys: {list(data.keys())}")
                 
         elif isinstance(data, (list, tuple)):
             lines.append(f"Element Count: {len(data)}")
@@ -420,6 +417,7 @@ class DataTab(QWidget):
         super().__init__(parent)
         self.translator = translator or Translator()
         self.current_data = None
+        self.display_cache = {}  # 添加显示缓存
         self.setup_ui()
         
     def setup_ui(self):
@@ -433,6 +431,8 @@ class DataTab(QWidget):
     def set_data(self, data: Any, path: str):
         """设置数据"""
         self.current_data = data
+        # 清空缓存
+        self.display_cache.clear()
         self.update_view()
         
     def update_view(self):
@@ -449,23 +449,33 @@ class DataTab(QWidget):
         self._show_table_view()
             
     def _show_text_view(self):
-        """显示文本视图"""
+        """显示文本视图 - 使用缓存和限制"""
+        # 检查缓存
+        if 'text_view' in self.display_cache:
+            text_widget = QTextEdit()
+            text_widget.setReadOnly(True)
+            text_widget.setFont(QFont("Consolas", 9))
+            text_widget.setText(self.display_cache['text_view'])
+            self.data_display.addTab(text_widget, "Text View")
+            return
+            
         text_widget = QTextEdit()
         text_widget.setReadOnly(True)
         text_widget.setFont(QFont("Consolas", 9))
         
-        # Format data as text
-        text_content = self._format_data_as_text(self.current_data)
+        # 限制处理的数据大小
+        text_content = self._format_data_as_text_safe(self.current_data)
+        self.display_cache['text_view'] = text_content
         text_widget.setText(text_content)
         
         self.data_display.addTab(text_widget, "Text View")
         
     def _show_table_view(self):
-        """显示表格视图"""
+        """显示表格视图 - 限制行列数"""
         if hasattr(self.current_data, 'shape') and len(self.current_data.shape) <= 2:
-            # Display as table
+            # Display as table with limits
             table = QTableWidget()
-            self._populate_table(table, self.current_data)
+            self._populate_table_safe(table, self.current_data)
             self.data_display.addTab(table, "Table View")
         else:
             # Not suitable for table display
@@ -474,68 +484,214 @@ class DataTab(QWidget):
             self.data_display.addTab(label, "Table View")
             
     def _show_raw_view(self):
-        """显示原始数据视图"""
+        """显示原始数据视图 - 使用缓存和截断"""
+        # 检查缓存
+        if 'raw_view' in self.display_cache:
+            text_widget = QTextEdit()
+            text_widget.setReadOnly(True)
+            text_widget.setFont(QFont("Consolas", 8))
+            text_widget.setText(self.display_cache['raw_view'])
+            self.data_display.addTab(text_widget, "Raw Data")
+            return
+            
         text_widget = QTextEdit()
         text_widget.setReadOnly(True)
         text_widget.setFont(QFont("Consolas", 8))
         
-        # Display raw data
-        raw_text = repr(self.current_data)
-        if len(raw_text) > 50000:
-            raw_text = raw_text[:50000] + "\n... (Data too long, truncated)"
+        # 智能截断大数据
+        raw_text = self._get_raw_text_safe(self.current_data)
+        self.display_cache['raw_view'] = raw_text
         text_widget.setText(raw_text)
         
         self.data_display.addTab(text_widget, "Raw Data")
     
-    def _format_data_as_text(self, data: Any) -> str:
-        """将数据格式化为文本"""
-        if hasattr(data, 'shape'):
-            # NumPy array or similar objects
-            if len(data.shape) == 1:
-                return str(data)
-            elif len(data.shape) == 2:
-                return str(data)
-            else:
-                return f"Multi-dimensional array {data.shape}:\n{str(data)[:1000]}..."
-        elif isinstance(data, dict):
-            lines = []
-            for key, value in data.items():
-                value_str = str(value)
-                if len(value_str) > 100:
-                    value_str = value_str[:100] + "..."
-                lines.append(f"{key}: {value_str}")
-            return "\n".join(lines)
-        elif isinstance(data, (list, tuple)):
-            if len(data) <= 100:
-                return str(data)
-            else:
-                return str(data[:100]) + f"\n... ({len(data) - 100} more items)"
-        else:
-            return str(data)
+    def _get_raw_text_safe(self, data: Any, max_chars: int = 10000) -> str:
+        """安全获取原始文本，避免大数据卡顿"""
+        try:
+            # 检查是否是数组且元素数量大于100
+            if hasattr(data, 'shape'):
+                try:
+                    # 安全获取size属性 - 支持PyTorch张量和NumPy数组
+                    if hasattr(data, 'numel'):  # PyTorch tensors
+                        size = data.numel()
+                    elif hasattr(data, 'size'):
+                        size = data.size() if callable(data.size) else data.size
+                    else:
+                        # 根据shape计算元素数量
+                        size = np.prod(data.shape)
+                        
+                    if size > 100:
+                        # 大数组只显示形状和部分数据
+                        try:
+                            if hasattr(data, 'flat'):
+                                preview = data.flat[:10]
+                            elif hasattr(data, 'flatten'):
+                                preview = data.flatten()[:10]
+                            else:
+                                # 对于PyTorch张量或其他类型
+                                if len(data.shape) == 1:
+                                    preview = data[:10]
+                                else:
+                                    preview = data.view(-1)[:10]  # PyTorch style flatten
+                            
+                            # 转换为字符串
+                            if hasattr(preview, 'numpy'):
+                                preview_str = str(preview.numpy())
+                            else:
+                                preview_str = str(preview)
+                                
+                            return f"Large array {data.shape}:\nFirst 10 elements: {preview_str}\n... (truncated for performance)"
+                        except:
+                            # 如果无法获取预览，尝试其他方法
+                            try:
+                                # 尝试简单的切片访问
+                                if len(data.shape) == 1:
+                                    preview = data[:10]
+                                elif len(data.shape) == 2:
+                                    preview = data[:5, :5]  # 显示5x5的小块
+                                else:
+                                    # 多维数组，尝试获取一个小的切片
+                                    slices = [slice(0, min(3, s)) for s in data.shape[:3]]
+                                    preview = data[tuple(slices)]
+                                
+                                # 转换为字符串
+                                if hasattr(preview, 'numpy'):
+                                    preview_str = str(preview.numpy())
+                                elif hasattr(preview, 'tolist'):
+                                    preview_str = str(preview.tolist())
+                                else:
+                                    preview_str = str(preview)
+                                    
+                                return f"Large array {data.shape}:\nSample data: {preview_str}\n... (truncated for performance)"
+                            except:
+                                return f"Large array {data.shape}:\nData type: {type(data)}\nToo large to preview safely"
+                except Exception as e:
+                    return f"Array shape {data.shape}:\nError getting size: {str(e)}"
+            
+            # 小数据直接转换
+            raw_text = repr(data)
+            if len(raw_text) > max_chars:
+                return raw_text[:max_chars] + "\n... (truncated for performance)"
+            return raw_text
+        except Exception as e:
+            return f"Unable to display raw data: {str(e)}\nData type: {type(data)}"
     
-    def _populate_table(self, table: QTableWidget, data: Any):
-        """填充表格数据"""
+    def _format_data_as_text_safe(self, data: Any, max_elements: int = 100) -> str:
+        """安全格式化数据为文本"""
+        try:
+            if hasattr(data, 'shape'):
+                # NumPy array or PyTorch tensor or similar objects
+                try:
+                    # 获取元素总数 - 支持不同类型的size属性
+                    if hasattr(data, 'numel'):  # PyTorch tensors
+                        size = data.numel()
+                    elif hasattr(data, 'size'):
+                        size = data.size() if callable(data.size) else data.size
+                    else:
+                        # 根据shape计算元素数量
+                        size = np.prod(data.shape)
+                        
+                    if size > max_elements:
+                        if len(data.shape) == 1:
+                            # 一维数据，显示前10个元素
+                            try:
+                                preview = data[:10]
+                                # 转换为字符串，处理PyTorch张量
+                                if hasattr(preview, 'numpy'):
+                                    preview_str = str(preview.numpy())
+                                else:
+                                    preview_str = str(preview)
+                                return f"Array shape {data.shape}:\n{preview_str}\n... (showing first 10 of {size} elements)"
+                            except:
+                                return f"1D Array shape {data.shape}:\nFirst 10 elements: [data access error]\n... (showing first 10 of {size} elements)"
+                        elif len(data.shape) == 2:
+                            # 二维数据，显示前10x10
+                            try:
+                                rows, cols = min(10, data.shape[0]), min(10, data.shape[1])
+                                preview = data[:rows, :cols]
+                                if hasattr(preview, 'numpy'):
+                                    preview_str = str(preview.numpy())
+                                else:
+                                    preview_str = str(preview)
+                                return f"Array shape {data.shape}:\n{preview_str}\n... (showing first {rows}x{cols} of {data.shape[0]}x{data.shape[1]} elements)"
+                            except:
+                                return f"2D Array shape {data.shape}:\nFirst 10x10 elements: [data access error]\n... (showing partial data)"
+                        else:
+                            return f"Multi-dimensional array {data.shape}:\nToo large to display, use Raw Data tab for details"
+                    else:
+                        # 小数据，直接显示
+                        try:
+                            if hasattr(data, 'numpy'):
+                                return str(data.numpy())
+                            else:
+                                return str(data)
+                        except:
+                            return f"Array shape {data.shape}:\n[Unable to convert to string safely]"
+                except Exception as e:
+                    # 如果出错，返回基本信息和错误详情
+                    return f"Array shape {data.shape}:\nError processing data: {str(e)}\nData type: {type(data)}"
+            elif isinstance(data, dict):
+                lines = []
+                for key, value in data.items():
+                    value_str = str(value)
+                    if len(value_str) > 100:
+                        value_str = value_str[:100] + "..."
+                    lines.append(f"{key}: {value_str}")
+                return "\n".join(lines)
+            elif isinstance(data, (list, tuple)):
+                if len(data) > max_elements:
+                    preview = data[:10]
+                    return f"{str(preview)}\n... (showing first 10 of {len(data)} items)"
+                else:
+                    return str(data)
+            else:
+                text = str(data)
+                if len(text) > 10000:
+                    return text[:10000] + "\n... (truncated for performance)"
+                return text
+        except Exception as e:
+            return f"Unable to format data: {str(e)}\nData type: {type(data)}"
+    
+    def _populate_table_safe(self, table: QTableWidget, data: Any):
+        """安全填充表格数据，限制大小"""
         if hasattr(data, 'shape'):
             if len(data.shape) == 1:
-                # One-dimensional array
-                table.setRowCount(len(data))
+                # One-dimensional array - limit to 10 rows
+                max_rows = min(len(data), 10)
+                table.setRowCount(max_rows)
                 table.setColumnCount(1)
                 table.setHorizontalHeaderLabels(["Value"])
                 
-                for i, value in enumerate(data):
-                    item = QTableWidgetItem(str(value))
+                for i in range(max_rows):
+                    item = QTableWidgetItem(str(data[i]))
                     table.setItem(i, 0, item)
+                
+                if len(data) > 10:
+                    # Add info about truncation
+                    table.setRowCount(max_rows + 1)
+                    item = QTableWidgetItem(f"... ({len(data) - 10} more rows truncated)")
+                    table.setItem(max_rows, 0, item)
                     
             elif len(data.shape) == 2:
-                # Two-dimensional array
-                rows, cols = data.shape
-                table.setRowCount(min(rows, 1000))  # Limit display rows
-                table.setColumnCount(min(cols, 100))  # Limit display columns
+                # Two-dimensional array - limit to 10x10
+                max_rows = min(data.shape[0], 10)
+                max_cols = min(data.shape[1], 10)
+                table.setRowCount(max_rows)
+                table.setColumnCount(max_cols)
                 
-                for i in range(min(rows, 1000)):
-                    for j in range(min(cols, 100)):
-                        item = QTableWidgetItem(str(data[i, j]))
-                        table.setItem(i, j, item)
+                for i in range(max_rows):
+                    for j in range(max_cols):
+                        try:
+                            item = QTableWidgetItem(str(data[i, j]))
+                            table.setItem(i, j, item)
+                        except:
+                            item = QTableWidgetItem("Error")
+                            table.setItem(i, j, item)
+                
+                # Add truncation info if needed
+                if data.shape[0] > 10 or data.shape[1] > 10:
+                    truncated_info = f"Showing {max_rows}x{max_cols} of {data.shape[0]}x{data.shape[1]}"
+                    table.setHorizontalHeaderLabels([f"Col {i}" for i in range(max_cols)] + [truncated_info] if max_cols < data.shape[1] else [f"Col {i}" for i in range(max_cols)])
 
 class StatisticsTab(QWidget):
     """统计标签页"""
@@ -588,12 +744,12 @@ class StatisticsTab(QWidget):
                     
             elif isinstance(data, dict):
                 lines.append(f"Key Count: {len(data)}")
-                lines.append(f"Keys: {list(data.keys())[:10]}")
+                lines.append(f"Keys: {list(data.keys())}")
                 
             elif isinstance(data, (list, tuple)):
                 lines.append(f"Element Count: {len(data)}")
                 if data:
-                    element_types = set(type(x).__name__ for x in data[:100])
+                    element_types = set(type(x).__name__ for x in data[:10])
                     lines.append(f"Element Types: {', '.join(element_types)}")
                     
             elif isinstance(data, str):

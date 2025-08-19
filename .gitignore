@@ -1,0 +1,6 @@
+build*
+dist
+ViewerDotStar.spec
+create_example_data.py
+*.pyc
+*.sh

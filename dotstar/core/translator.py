@@ -143,11 +143,11 @@ class Translator:
             # 关于对话框
             'about_title': 'About',
             'about_text': '''
-            <h2>DotStar Scientific Data Viewer</h2>
+            <h2>Viewer Dot Star (Viewer.*) Scientific Data Viewer</h2>
             <p>Version: 0.1.0</p>
             <p>A multi-format data file browser and analysis tool designed for researchers</p>
             <p>Supports JSON, Pickle, NumPy, MATLAB, HDF5, CSV, YAML and many other formats</p>
-            <p><b>Development Team:</b> DotStar</p>
+            <p><b>Author:</b> github@cowboy446</p>
             ''',
             
             # 支持格式
@@ -289,11 +289,11 @@ class Translator:
             # 关于对话框
             'about_title': '关于',
             'about_text': '''
-            <h2>DotStar 科研数据查看器</h2>
+            <h2>Viewer Dot Star (Viewer.*) 科研数据查看器</h2>
             <p>版本: 0.1.0</p>
-            <p>专为科研人员设计的多格式数据文件浏览和分析工具</p>
+            <p>多格式数据文件浏览和分析工具</p>
             <p>支持JSON、Pickle、NumPy、MATLAB、HDF5、CSV、YAML等多种格式</p>
-            <p><b>开发团队:</b> DotStar</p>
+            <p><b>作者:</b> github@cowboy446</p>
             ''',
             
             # 支持格式

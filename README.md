@@ -27,15 +27,15 @@ python main.py
 ### Optional Dependencies
 ```bash
 # For additional format support
-pip install scipy h5py netCDF4 pyarrow open3d torch safetensors astropy
+pip install scipy h5py netCDF4 pyarrow open3d torch safetensors astropy matplotlib
 ```
 
 ## Usage
 
 1. Launch: `python main.py`
-2. Load files: Drag & drop or File -> Open
+2. Load files: `Drag & drop` or `File -> Open`
 3. Explore data in tree view and detail panels
 
 ## License
 
-MIT License
+[MIT License](https://opensource.org/licenses/MIT)

@@ -144,6 +144,11 @@ class MainWindow(QMainWindow):
         self.setup_statusbar()
         self.load_settings()
         
+        # Set favicon
+        favicon_path = 'favicon.png'
+        if os.path.exists(favicon_path):
+            self.setWindowIcon(QIcon(favicon_path))
+        
     def setup_ui(self):
         """设置用户界面"""
         self.setWindowTitle(translator.tr('main_window_title'))
