@@ -42,7 +42,7 @@ class Translator:
             'load_failed': 'Load failed',
             'loaded': 'Loaded: {}',
             
-            # 文件相关
+            # File related
             'file_loading': 'File Loading',
             'file_info': 'File Information',
             'recent_files_panel': 'Recent Files',
@@ -52,11 +52,21 @@ class Translator:
             'select_data_file': 'Select Data File',
             'all_supported': 'All Supported Formats',
             'all_files': 'All Files (*.*)',
-            'file_not_found': 'File not found: {}',
+            'file_not_found': 'File Not Found',
+            'file_not_found_msg': 'File not found: {}',
             'unsupported_format': 'Unsupported file format: {}',
             'load_error': 'Load Error',
             'load_error_msg': 'Failed to load file:\n{}',
             'no_file_loaded': 'No file loaded',
+            
+            # Recent Files functionality
+            'open_selected': 'Open Selected',
+            'clear_recent': 'Clear List',
+            'no_selection': 'No Selection',
+            'select_files_to_open': 'Please select files to open.',
+            'files_loaded': 'Files Loaded',
+            'clear_recent_files': 'Clear Recent Files',
+            'confirm_clear_recent_files': 'Are you sure you want to clear all recent files?',
             
             # 数据检查器
             'data_structure': 'Data Structure',
@@ -188,11 +198,21 @@ class Translator:
             'select_data_file': '选择数据文件',
             'all_supported': '所有支持的格式',
             'all_files': '所有文件 (*.*)',
-            'file_not_found': '文件不存在: {}',
+            'file_not_found': '文件不存在',
+            'file_not_found_msg': '文件不存在: {}',
             'unsupported_format': '不支持的文件格式: {}',
             'load_error': '加载错误',
             'load_error_msg': '文件加载失败:\n{}',
             'no_file_loaded': '未加载文件',
+            
+            # 最近文件功能
+            'open_selected': '打开选中',
+            'clear_recent': '清空列表',
+            'no_selection': '未选择文件',
+            'select_files_to_open': '请选择要打开的文件。',
+            'files_loaded': '文件已加载',
+            'clear_recent_files': '清空最近文件',
+            'confirm_clear_recent_files': '确定要清空所有最近文件吗？',
             
             # 数据检查器
             'data_structure': '数据结构',

@@ -10,7 +10,8 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                             QSplitter, QMenuBar, QMenu, QAction, QToolBar,
                             QStatusBar, QFileDialog, QMessageBox, QLabel,
                             QPushButton, QFrame, QTextEdit, QProgressBar,
-                            QGroupBox, QApplication)
+                            QGroupBox, QApplication, QListWidget, QListWidgetItem,
+                            QAbstractItemView, QDialog, QGridLayout)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QSettings
 from PyQt5.QtGui import QIcon, QFont, QPixmap, QDragEnterEvent, QDropEvent
 
@@ -47,7 +48,12 @@ class DropArea(QFrame):
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.main_window = None  # 引用主窗口
         self.setup_ui()
+        
+    def set_main_window(self, main_window):
+        """设置主窗口引用"""
+        self.main_window = main_window
         
     def setup_ui(self):
         """Set up interface"""
@@ -175,6 +181,7 @@ class MainWindow(QMainWindow):
         file_layout = QVBoxLayout(file_group)
         
         self.drop_area = DropArea()
+        self.drop_area.set_main_window(self)  # 设置主窗口引用
         self.drop_area.fileDropped.connect(self.load_file)
         file_layout.addWidget(self.drop_area)
         
@@ -191,14 +198,29 @@ class MainWindow(QMainWindow):
         
         layout.addWidget(info_group)
         
-        # 最近文件区域
+        # Recent Files Area
         recent_group = QGroupBox(translator.tr('recent_files_panel'))
         recent_layout = QVBoxLayout(recent_group)
         
-        self.recent_files_widget = QTextEdit()
+        self.recent_files_widget = QListWidget()
         self.recent_files_widget.setMaximumHeight(150)
-        self.recent_files_widget.setReadOnly(True)
+        self.recent_files_widget.setSelectionMode(QAbstractItemView.ExtendedSelection)  # Allow multiple selection
+        self.recent_files_widget.itemDoubleClicked.connect(self.open_recent_file_from_list)
+        self.recent_files_widget.itemClicked.connect(self.handle_recent_file_click)
         recent_layout.addWidget(self.recent_files_widget)
+        
+        # Add buttons for recent files operations
+        recent_buttons_layout = QHBoxLayout()
+        
+        open_button = QPushButton(translator.tr('open_selected'))
+        open_button.clicked.connect(self.open_selected_recent_files)
+        recent_buttons_layout.addWidget(open_button)
+        
+        clear_button = QPushButton(translator.tr('clear_recent'))
+        clear_button.clicked.connect(self.clear_recent_files)
+        recent_buttons_layout.addWidget(clear_button)
+        
+        recent_layout.addLayout(recent_buttons_layout)
         
         layout.addWidget(recent_group)
         
@@ -393,45 +415,97 @@ class MainWindow(QMainWindow):
         self.save_settings()
         
     def update_recent_files_display(self):
-        """更新最近文件显示"""
+        """Update recent files display"""
+        self.recent_files_widget.clear()
+        
         if not self.recent_files:
-            self.recent_files_widget.setText(translator.tr('no_recent_files'))
+            item = QListWidgetItem(translator.tr('no_recent_files'))
+            item.setData(Qt.UserRole, None)  # No file path
+            self.recent_files_widget.addItem(item)
             return
             
-        text_lines = []
         for i, file_path in enumerate(self.recent_files, 1):
             file_name = os.path.basename(file_path)
-            text_lines.append(f"{i}. {file_name}")
-            
-        self.recent_files_widget.setText("\n".join(text_lines))
+            display_text = f"{i}. {file_name}"
+            item = QListWidgetItem(display_text)
+            item.setData(Qt.UserRole, file_path)  # Store full path
+            item.setToolTip(file_path)  # Show full path on hover
+            self.recent_files_widget.addItem(item)
         
     def update_recent_menu(self):
-        """更新最近文件菜单"""
+        """Update recent files menu"""
         self.recent_menu.clear()
         
         for file_path in self.recent_files:
             file_name = os.path.basename(file_path)
             action = QAction(file_name, self)
             action.setData(file_path)
-            action.triggered.connect(lambda checked, path=file_path: self.load_file(path))
+            action.triggered.connect(lambda checked, path=file_path: self.load_file_from_menu(path))
             self.recent_menu.addAction(action)
             
         if not self.recent_files:
             no_files_action = QAction(translator.tr('no_recent_files'), self)
             no_files_action.setEnabled(False)
             self.recent_menu.addAction(no_files_action)
+    
+    def load_file_from_menu(self, file_path: str):
+        """从菜单加载文件"""
+        self.load_file(file_path)
+    
+    def handle_recent_file_click(self, item):
+        """Handle single click on recent file item"""
+        # Single click just selects the item, no action needed
+        pass
+    
+    def open_recent_file_from_list(self, item):
+        """Handle double click on recent file item"""
+        file_path = item.data(Qt.UserRole)
+        if file_path and os.path.exists(file_path):
+            self.load_file(file_path)
+        elif file_path:
+            QMessageBox.warning(self, translator.tr('file_not_found'), 
+                              translator.tr('file_not_found_msg').format(file_path))
+    
+    def open_selected_recent_files(self):
+        """Open currently selected recent file(s)"""
+        selected_items = self.recent_files_widget.selectedItems()
+        if not selected_items:
+            QMessageBox.information(self, translator.tr('no_selection'), 
+                                  translator.tr('select_files_to_open'))
+            return
+        
+        for item in selected_items:
+            file_path = item.data(Qt.UserRole)
+            if file_path and os.path.exists(file_path):
+                self.load_file(file_path)
+                break  # 只加载第一个文件，避免并发加载
+            elif file_path:
+                QMessageBox.warning(self, translator.tr('file_not_found'), 
+                                  translator.tr('file_not_found_msg').format(file_path))
+    
+    def clear_recent_files(self):
+        """Clear all recent files"""
+        reply = QMessageBox.question(self, translator.tr('clear_recent_files'), 
+                                   translator.tr('confirm_clear_recent_files'),
+                                   QMessageBox.Yes | QMessageBox.No,
+                                   QMessageBox.No)
+        
+        if reply == QMessageBox.Yes:
+            self.recent_files.clear()
+            self.update_recent_files_display()
+            self.update_recent_menu()
+            # Save to settings
+            settings = QSettings()
+            settings.setValue('recent_files', self.recent_files)
             
     def toggle_left_panel(self, checked: bool):
         """切换左侧面板显示"""
         self.left_panel.setVisible(checked)
         
     def show_supported_formats(self):
-        """显示支持的文件格式"""
-        formats_text = translator.tr('formats_text', "")
-        for ext, desc in self.file_loader.SUPPORTED_FORMATS.items():
-            formats_text += f"{ext}: {desc}\n"
-            
-        QMessageBox.information(self, translator.tr('supported_formats_title'), formats_text)
+        """Display supported file formats in categorized columns"""
+        dialog = SupportedFormatsDialog(self)
+        dialog.exec_()
         
     def change_language(self, language_code: str):
         """切换语言"""
@@ -467,3 +541,116 @@ class MainWindow(QMainWindow):
         """关闭事件"""
         self.save_settings()
         event.accept()
+
+
+class SupportedFormatsDialog(QDialog):
+    """Supported file formats dialog with categorized columns"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(translator.tr('supported_formats_title', 'Supported File Formats'))
+        self.setMinimumSize(800, 600)
+        self.setup_ui()
+        
+    def setup_ui(self):
+        """Setup the dialog interface"""
+        layout = QVBoxLayout(self)
+        
+        # Title
+        title_label = QLabel("Supported file formats:")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin: 10px;")
+        layout.addWidget(title_label)
+        
+        # Create grid layout for categories
+        grid_widget = QWidget()
+        grid_layout = QGridLayout(grid_widget)
+        
+        # Define format categories
+        categories = {
+            "Data Formats": {
+                '.json': 'JSON format',
+                '.pkl': 'Pickle format', 
+                '.pickle': 'Pickle format',
+            },
+            "Scientific Computing": {
+                '.npy': 'NumPy array',
+                '.npz': 'NumPy compressed array',
+                '.mat': 'MATLAB data',
+                '.h5': 'HDF5 format',
+                '.hdf5': 'HDF5 format',
+                '.nc': 'NetCDF format',
+            },
+            "Tabular Data": {
+                '.csv': 'CSV table',
+                '.tsv': 'TSV table',
+                '.parquet': 'Parquet format',
+            },
+            "Configuration": {
+                '.yaml': 'YAML format',
+                '.yml': 'YAML format',
+                '.toml': 'TOML format',
+            },
+            "3D Models": {
+                '.ply': 'PLY point cloud',
+                '.obj': 'OBJ model',
+                '.stl': 'STL model',
+                '.off': 'OFF model',
+                '.xyz': 'XYZ point cloud',
+            },
+            "AI/ML Models": {
+                '.pt': 'PyTorch model',
+                '.pth': 'PyTorch checkpoint',
+                '.safetensors': 'SafeTensors format',
+            },
+            "Images": {
+                '.tiff': 'TIFF image',
+                '.tif': 'TIFF image',
+                '.fits': 'FITS astronomical image',
+            }
+        }
+        
+        # Create columns for each category
+        col = 0
+        max_cols = 3  # Maximum 3 columns
+        
+        for category_name, formats in categories.items():
+            # Create group box for category
+            group_box = QGroupBox(category_name)
+            group_layout = QVBoxLayout(group_box)
+            
+            # Add formats to the group
+            for ext, desc in formats.items():
+                format_label = QLabel(f"<b>{ext}</b>: {desc}")
+                format_label.setStyleSheet("margin: 2px; padding: 2px;")
+                group_layout.addWidget(format_label)
+            
+            # Add group to grid
+            row = col // max_cols
+            column = col % max_cols
+            grid_layout.addWidget(group_box, row, column)
+            col += 1
+        
+        layout.addWidget(grid_widget)
+        
+        # OK button
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        ok_button = QPushButton("OK")
+        ok_button.setStyleSheet("""
+            QPushButton {
+                background-color: #007acc;
+                color: white;
+                border: none;
+                padding: 8px 20px;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #005a9e;
+            }
+        """)
+        ok_button.clicked.connect(self.accept)
+        button_layout.addWidget(ok_button)
+        
+        layout.addLayout(button_layout)

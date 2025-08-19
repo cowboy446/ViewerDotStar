@@ -108,8 +108,8 @@ class DataTreeWidget(QTreeWidget):
         self.setHeaderLabels([
             self.translator.tr("name"), 
             self.translator.tr("type"), 
-            self.translator.tr("size_shape"), 
-            self.translator.tr("description")
+            self.translator.tr("size shape"), 
+            self.translator.tr("data format")
         ])
         self.setColumnWidth(0, 150)
         self.setColumnWidth(1, 100)
@@ -426,24 +426,7 @@ class DataTab(QWidget):
         """设置界面"""
         layout = QVBoxLayout(self)
         
-        # 控制面板
-        control_frame = QFrame()
-        control_layout = QHBoxLayout(control_frame)
-        
-        self.view_mode_combo = QComboBox()
-        self.view_mode_combo.addItems([
-            self.translator.tr("text_view"), 
-            self.translator.tr("table_view"), 
-            self.translator.tr("raw_data")
-        ])
-        self.view_mode_combo.currentTextChanged.connect(self.update_view)
-        control_layout.addWidget(QLabel(self.translator.tr("view_mode") + ":"))
-        control_layout.addWidget(self.view_mode_combo)
-        
-        control_layout.addStretch()
-        layout.addWidget(control_frame)
-        
-        # 数据显示区域
+        # 数据显示区域 - 直接显示标签页
         self.data_display = QTabWidget()
         layout.addWidget(self.data_display)
         
@@ -460,14 +443,10 @@ class DataTab(QWidget):
         # 清除现有标签
         self.data_display.clear()
         
-        mode = self.view_mode_combo.currentText()
-        
-        if mode == self.translator.tr("text_view"):
-            self._show_text_view()
-        elif mode == self.translator.tr("table_view"):
-            self._show_table_view()
-        elif mode == self.translator.tr("raw_data"):
-            self._show_raw_view()
+        # 显示所有三个视图作为标签页
+        self._show_raw_view()
+        self._show_text_view()
+        self._show_table_view()
             
     def _show_text_view(self):
         """显示文本视图"""
@@ -479,7 +458,7 @@ class DataTab(QWidget):
         text_content = self._format_data_as_text(self.current_data)
         text_widget.setText(text_content)
         
-        self.data_display.addTab(text_widget, self.translator.tr("text"))
+        self.data_display.addTab(text_widget, "Text View")
         
     def _show_table_view(self):
         """显示表格视图"""
@@ -487,12 +466,12 @@ class DataTab(QWidget):
             # Display as table
             table = QTableWidget()
             self._populate_table(table, self.current_data)
-            self.data_display.addTab(table, self.translator.tr("table"))
+            self.data_display.addTab(table, "Table View")
         else:
             # Not suitable for table display
             label = QLabel("This data is not suitable for table display")
             label.setAlignment(Qt.AlignCenter)
-            self.data_display.addTab(label, self.translator.tr("table"))
+            self.data_display.addTab(label, "Table View")
             
     def _show_raw_view(self):
         """显示原始数据视图"""
@@ -506,7 +485,7 @@ class DataTab(QWidget):
             raw_text = raw_text[:50000] + "\n... (Data too long, truncated)"
         text_widget.setText(raw_text)
         
-        self.data_display.addTab(text_widget, self.translator.tr("raw"))
+        self.data_display.addTab(text_widget, "Raw Data")
     
     def _format_data_as_text(self, data: Any) -> str:
         """将数据格式化为文本"""
