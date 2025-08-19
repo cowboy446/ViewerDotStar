@@ -1,6 +1,8 @@
 # Viewer Dot Star (Viewer.*)
 
-A multi-format data file browser tool designed for researchers.
+A multi-format data file browser tool designed for researchers, liberate you from annoying intermediate steps of data processing and pdb breakpoints when processing data and replicating others' papers.
+
+Now it supports ubuntu only.
 
 ## Features
 ![](figs/image.png)
