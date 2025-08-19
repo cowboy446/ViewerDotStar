@@ -1,6 +1,6 @@
 build*
 dist
 ViewerDotStar.spec
-create_example_data.py
+create_sample_data.py
 *.pyc
 *.sh

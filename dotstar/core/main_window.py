@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         self.load_settings()
         
         # Set favicon
-        favicon_path = 'favicon.png'
+        favicon_path = 'figs/favicon.png'
         if os.path.exists(favicon_path):
             self.setWindowIcon(QIcon(favicon_path))
         
