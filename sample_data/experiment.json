@@ -1,0 +1,43 @@
+{
+  "experiment_data": {
+    "name": "蛋白质结构分析实验",
+    "date": "2024-01-15",
+    "researcher": "张三",
+    "lab": "生物物理实验室",
+    "samples": [
+      {
+        "sample_id": "S001",
+        "protein": "血红蛋白",
+        "concentration": 10.5,
+        "temperature": 25.0,
+        "ph": 7.4,
+        "measurements": [1.23, 1.45, 1.67, 1.89, 2.01]
+      },
+      {
+        "sample_id": "S002", 
+        "protein": "胰岛素",
+        "concentration": 8.3,
+        "temperature": 37.0,
+        "ph": 6.8,
+        "measurements": [0.95, 1.12, 1.34, 1.56, 1.78]
+      }
+    ],
+    "equipment": {
+      "spectrometer": "UV-2600",
+      "calibration_date": "2024-01-10",
+      "wavelength_range": [200, 800]
+    },
+    "results": {
+      "statistical_summary": {
+        "mean_absorption": 1.456,
+        "std_deviation": 0.234,
+        "confidence_interval": [1.234, 1.678]
+      },
+      "conclusions": [
+        "蛋白质浓度对吸光度呈线性关系",
+        "温度变化对测量结果影响较小",
+        "pH值在6.5-7.5范围内结果稳定"
+      ]
+    }
+  }
+}

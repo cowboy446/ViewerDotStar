@@ -1,0 +1,63 @@
+project:
+  name: "深度学习模型训练项目"
+  version: "2.1.0"
+  description: "使用PyTorch训练图像分类模型"
+
+dataset:
+  name: "CIFAR-10"
+  classes: 10
+  train_samples: 50000
+  test_samples: 10000
+  image_size: [32, 32, 3]
+  preprocessing:
+    - "随机水平翻转"
+    - "随机裁剪"
+    - "标准化"
+
+model:
+  architecture: "ResNet18"
+  parameters: 11689512
+  layers:
+    - type: "Conv2d"
+      in_channels: 3
+      out_channels: 64
+      kernel_size: 7
+    - type: "BatchNorm2d"
+      num_features: 64
+    - type: "ReLU"
+      inplace: true
+    - type: "MaxPool2d"
+      kernel_size: 3
+      stride: 2
+
+training:
+  optimizer: "Adam"
+  learning_rate: 0.001
+  batch_size: 128
+  epochs: 100
+  loss_function: "CrossEntropyLoss"
+  metrics:
+    - "accuracy"
+    - "top5_accuracy"
+    - "f1_score"
+
+hyperparameters:
+  weight_decay: 0.0001
+  momentum: 0.9
+  dropout_rate: 0.5
+  early_stopping:
+    patience: 10
+    min_delta: 0.001
+
+results:
+  best_epoch: 87
+  train_accuracy: 0.9234
+  val_accuracy: 0.8876
+  test_accuracy: 0.8901
+  training_time: "2h 34m 12s"
+  
+hardware:
+  gpu: "NVIDIA RTX 3080"
+  cpu: "Intel i7-10700K"
+  memory: "32GB DDR4"
+  storage: "1TB NVMe SSD"
