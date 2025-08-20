@@ -5,32 +5,21 @@ A multi-format data file browser tool designed for researchers, liberate you fro
 Now it supports ubuntu only.
 
 ## Features
-![](figs/image.png)
-- **File Format Support**: JSON, Pickle, NumPy, MATLAB, HDF5, NetCDF, CSV, YAML, TOML, PLY, OBJ, STL, PyTorch, SafeTensors, TIFF, FITS
+
+- **File Format Support**: ![](figs/image.png)
 - **Data Inspection**: Tree view, multiple display modes, statistical analysis
 - **User Interface**: Drag & drop, recent files, multi-language support; Support for both high-DPI and low-DPI displays
 
 ## Installation
+Python 3.8 ~ 3.11 is supported.
 
-### Requirements
-- Python
-- PyQt5
-- NumPy
-- toml
-
-### Install
 ```bash
-git clone https://github.com/dotstar/dataviewer.git
-cd DotStarViewer
+git clone https://github.com/cowboy446/ViewerDotStar.git
+cd ViewerDotStar
 pip install -r requirements.txt
 python main.py
 ```
 
-### Optional Dependencies
-```bash
-# For additional format support
-pip install scipy h5py netCDF4 pyarrow open3d torch safetensors astropy matplotlib
-```
 
 ## Usage
 1. Launch: `python main.py`
@@ -38,6 +27,7 @@ pip install scipy h5py netCDF4 pyarrow open3d torch safetensors astropy matplotl
 3. Explore data in tree view and detail panels
 
     ![](figs/image2.png)
+
 ## License
 
 [MIT License](https://opensource.org/licenses/MIT)
